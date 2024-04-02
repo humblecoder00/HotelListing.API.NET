@@ -10,7 +10,7 @@
         // Relationship with the Hotel entity:
         // A country can have many hotels, but a hotel can only have one country.
         // Here we represent the one-to-many relationship between the Country and Hotel entities.
-        public virtual IList<Hotel> Hotels { get; set; }
+        public virtual IList<Hotel>? Hotels { get; set; }
 
     }
 }
