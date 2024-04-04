@@ -32,5 +32,26 @@ namespace HotelListing.API.Repository
             return await _context.Countries.Include(x => x.Hotels)
                 .FirstOrDefaultAsync(x => x.Id == id);
         }
+
+        public async Task<bool> CountryExists(int id)
+        {
+            /*
+            // Note: Added this method to prevent the error caused by circular references when querying the database. (Exists method usage in GenericRepository)
+            
+            About the error "System.Text.Json.JsonException: A possible object cycle was detected...":
+
+            Circular reference error occurs when Entity Framework Core's change tracking creates complex object graphs 
+            with circular references (e.g., Country -> Hotels -> Country), and System.Text.Json attempts to serialize these for responses. 
+            This leads to serialization exceptions due to infinite recursion. To avoid this, consider:
+            // 1. Using .AsNoTracking() for read-only queries to prevent unnecessary entity tracking.
+            // 2. Managing eager loading to avoid unintentional loading of large object graphs.
+            // 3. Utilizing DTOs to structure response data, preventing circular references.
+            // 4. Optionally, configure System.Text.Json to handle circular references, though it's preferable to structure data to avoid them.
+
+            Here is an example of problematic querying:
+            //var country = await _countriesRepository.Exists(hotelPayload.CountryId); // this causes errors
+             */
+            return await _context.Countries.AnyAsync(x => x.Id == id);
+        }
     }
 }
