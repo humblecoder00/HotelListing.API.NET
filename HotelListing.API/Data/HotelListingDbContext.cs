@@ -1,4 +1,5 @@
 ﻿// Includes the Entity Framework Core namespace, which provides the DbContext and other EF Core functionalities
+using HotelListing.API.Data.Configurations;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -42,60 +43,21 @@ namespace HotelListing.API.Data
             // For example, if you're using ASP.NET Identity, it configures the identity model.
             base.OnModelCreating(modelBuilder);
 
+            // APPLY CONFIGURATIONS:
+
+            modelBuilder.ApplyConfiguration(new RoleConfiguration()); // Applies the RoleConfiguration class to the model.
+
             // This configures the 'Country' entity. It specifies that when the database is created,
             // the 'Countries' table should be seeded with the specified initial data.
 
             // NOTE: Here it makes sense to seed the Country data first.
             // This is because the Hotel needs a Country to be associated with.
-            modelBuilder.Entity<Country>().HasData(
-                new Country
-                {
-                    Id = 1, // Specifies the primary key value of the 'Country' entity.
-                    Name = "Jamaica", // Sets the 'Name' property for this 'Country' entity.
-                    ShortName = "JM" // Sets the 'ShortName' property for this 'Country' entity.
-                },
-                new Country
-                {
-                    Id = 2, // Same as above, for a different 'Country' entity.
-                    Name = "Bahamas",
-                    ShortName = "BS"
-                },
-                new Country
-                {
-                    Id = 3, // And again, for another 'Country' entity.
-                    Name = "Cayman Island",
-                    ShortName = "CI"
-                }
-            );
+            modelBuilder.ApplyConfiguration(new CountryConfiguration()); // Applies the CountryConfiguration class to the model.
+
 
             // Similar to the 'Country' entity, this configures the 'Hotel' entity.
             // It seeds the 'Hotels' table with the specified initial data.
-            modelBuilder.Entity<Hotel>().HasData(
-                new Hotel
-                {
-                    Id = 1, // Specifies the primary key value of the 'Hotel' entity.
-                    Name = "Sandals Resort and Spa", // Sets the 'Name' property.
-                    Address = "Negril", // Sets the 'Address' property.
-                    CountryId = 1, // Foreign key linking this 'Hotel' to its 'Country'.
-                    Rating = 4.5 // Sets the 'Rating' property.
-                },
-                new Hotel
-                {
-                    Id = 2, // And so on, for each 'Hotel' entity to seed.
-                    Name = "Comfort Suites",
-                    Address = "George Town",
-                    CountryId = 3,
-                    Rating = 4.3
-                },
-                new Hotel
-                {
-                    Id = 3,
-                    Name = "Grand Palldium",
-                    Address = "Nassua",
-                    CountryId = 2,
-                    Rating = 4
-                }
-            );
+            modelBuilder.ApplyConfiguration(new HotelConfiguration()); // Applies the HotelConfiguration class to the model.
         }
     }
 }
