@@ -1,4 +1,5 @@
 ﻿// Includes the Entity Framework Core namespace, which provides the DbContext and other EF Core functionalities
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 // Declares the namespace for your DbContext class. Namespaces organize your code and prevent naming conflicts.
@@ -8,7 +9,10 @@ namespace HotelListing.API.Data
     // DbContext is a key class in EF Core that manages database connections and caching.
     // It is a contract between the application and the database, and is used to query and save data.
     // We have to let it know about the database tables we have.
-    public class HotelListingDbContext : DbContext
+
+    // NOTE: When adding the Identity Core, you should inherit from IdentityDbContext<ApiUser> instead of DbContext:
+    // This is because the Identity Core requires a DbContext that is aware of the user type.
+    public class HotelListingDbContext : IdentityDbContext<ApiUser>
     {
         // Constructor for your DbContext. It accepts DbContextOptions, which is used to configure the DbContext.
         // The ": base(options)" part calls the base class constructor with the options, enabling EF Core configurations.

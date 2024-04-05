@@ -81,6 +81,7 @@ namespace HotelListing.API.Controllers
 
             // Entity Framework will automatically track the changes made to the hotel object
             // without having to explicitly set the state to "EntityState.Modified"
+            // hotelPayload -> maps to -> hotel
             _mapper.Map(hotelPayload, hotel);
 
             try
