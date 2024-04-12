@@ -15,21 +15,25 @@ namespace HotelListing.API.Repository
         private readonly IMapper _mapper;
         private readonly UserManager<ApiUser> _userManager;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<AuthManager> _logger;
         private ApiUser _user;
 
         // refer to properties for string values to prevent typos:
         private const string _loginProvider = "HotelListingAPI";
         private const string _refreshToken = "RefreshToken";
 
-        public AuthManager(IMapper mapper, UserManager<ApiUser> userManager, IConfiguration configuration)
+        public AuthManager(IMapper mapper, UserManager<ApiUser> userManager, IConfiguration configuration, ILogger<AuthManager> logger)
         {
             this._mapper = mapper;
             this._userManager = userManager;
             this._configuration = configuration;
+            this._logger = logger;
         }
 
         public async Task<AuthResponseDTO> Login(LoginDTO loginPayload)
         {
+            _logger.LogInformation($"Looking for user with email {loginPayload.Email}.");
+
             // Find the user by email:
             _user = await _userManager.FindByEmailAsync(loginPayload.Email);
             // Validate password:
@@ -37,10 +41,12 @@ namespace HotelListing.API.Repository
 
             if (_user == null || isValidUser == false)
             {
+                _logger.LogWarning($"User with email {loginPayload.Email} was not found.");
                 return null;
             }
 
             var token = await GenerateToken();
+            _logger.LogInformation($"Token generated for user with email {loginPayload.Email} | Token: {token}");
             return new AuthResponseDTO
             {
                 Token = token,

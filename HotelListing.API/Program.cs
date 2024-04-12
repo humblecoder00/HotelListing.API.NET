@@ -1,6 +1,8 @@
+using Asp.Versioning;
 using HotelListing.API.Configurations;
 using HotelListing.API.Contracts;
 using HotelListing.API.Data;
+using HotelListing.API.Middleware;
 using HotelListing.API.Repository;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -42,6 +44,8 @@ builder.Services.AddIdentityCore<ApiUser>()
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
+
+// NOTE: For complete versioning, you need to do more specific setup
 builder.Services.AddSwaggerGen();
 
 // First add the CORS service to the builder.Services
@@ -50,6 +54,40 @@ builder.Services.AddCors(options =>
     // Here you can specify what to allow or not
     options.AddPolicy("AllowAll", allow => allow.AllowAnyHeader().AllowAnyOrigin().AllowAnyMethod());
 });
+
+
+// reference: https://github.com/dotnet/aspnet-api-versioning/wiki/Migration#configuration
+// Begin configuration for the API versioning service, which allows you to specify and enforce API versioning in your application.
+builder.Services.AddApiVersioning(options =>
+{
+    // If an API version isn't specified in the client request, the service will assume the default version for the API.
+    options.AssumeDefaultVersionWhenUnspecified = true;
+
+    // Set the default API version to 1.0. This version will be used when no specific version is requested by the client.
+    options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
+
+    // Enable the API to report the supported versions via response headers. This is helpful for clients to understand which versions are available.
+    options.ReportApiVersions = true;
+
+    // Combine multiple API version readers, which means the API version can be specified by the client in several ways:
+    options.ApiVersionReader = ApiVersionReader.Combine(
+        new QueryStringApiVersionReader("api-version"), // Through a query string parameter named "api-version".
+        new HeaderApiVersionReader("X-Version"),        // Through a request header named "X-Version".
+        new MediaTypeApiVersionReader("ver")            // Through a version parameter in the accept header media type named "ver".
+    );
+}) // Continue chaining the configuration.
+.AddApiExplorer( // Configure the API Explorer which is used by Swagger and other tools to generate API documentation.
+    options =>
+    {
+        // Define the format of the group name for each API version in the documentation.
+        // It uses the version number and pads it with zeroes if necessary.
+        options.GroupNameFormat = "'v'VVV";
+
+        // When generating API paths in the documentation, replace the version placeholder with the actual version number.
+        options.SubstituteApiVersionInUrl = true;
+    }
+);
+
 
 // Add the Serilog:
 // 1. Add the Serilog package to the project
@@ -116,12 +154,17 @@ builder.Services.AddAuthentication(options =>
 
 var app = builder.Build();
 
+// These below are middlewares
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// This middleware is used to handle exceptions globally (custom)
+app.UseMiddleware<ExceptionMiddleware>();
 
 // This logs info like the request method, path, response status code, how long the request took, etc.
 app.UseSerilogRequestLogging();

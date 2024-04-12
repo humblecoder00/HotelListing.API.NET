@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 using HotelListing.API.Models.Country;
@@ -18,16 +13,16 @@ namespace HotelListing.API.Data
     // Attributes that define the route for the API controller and specify that this controller responds to web API requests.
     [Route("api/v{version:apiVersion}/countries")]
     [ApiController]
-    [ApiVersion("1.0", Deprecated = true)]
-    public class CountriesController : ControllerBase
+    [ApiVersion("2.0")] // NOTE: This will work in the Postman, to make it work in Swagger you need additional configuration.
+    public class CountriesV2Controller : ControllerBase
     {
         // IMapper is a service that can map objects of one type to another.
         private readonly IMapper _mapper;
         // Repository handles the DB operations in detail, so it is abstracted from the controller.
         private readonly ICountriesRepository _countriesRepository;
-        private readonly ILogger<CountriesController> _logger;
+        private readonly ILogger<CountriesV2Controller> _logger;
 
-        public CountriesController(IMapper mapper, ICountriesRepository countriesRepository, ILogger<CountriesController> logger)
+        public CountriesV2Controller(IMapper mapper, ICountriesRepository countriesRepository, ILogger<CountriesV2Controller> logger)
         {
             this._mapper = mapper;
             this._countriesRepository = countriesRepository;
