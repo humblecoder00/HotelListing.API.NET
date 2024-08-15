@@ -7,6 +7,7 @@ using HotelListing.API.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using HotelListing.API.Exceptions;
 using Asp.Versioning;
+using Microsoft.AspNetCore.OData.Query;
 
 namespace HotelListing.API.Data
 {
@@ -30,7 +31,11 @@ namespace HotelListing.API.Data
         }
 
         // GET: api/Countries
+        // Endpoint with OData (EnableQuery) support
+        // This can be called like: api/v2/countries?$select=name,shortname&$filter=name eq 'Cuba'&$orderby=name
+        // Or, one by one such as: api/v2/countries?$select=name
         [HttpGet]
+        [EnableQuery]
         public async Task<ActionResult<IEnumerable<GetCountryDTO>>> GetCountries()
         {
             var countries = await _countriesRepository.GetAllAsync();
