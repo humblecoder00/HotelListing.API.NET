@@ -151,6 +151,17 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// Configure response caching services
+builder.Services.AddResponseCaching(options =>
+    {
+        // Software level: Set maximum response body size that can be cached (in bytes).
+        options.MaximumBodySize = 1024;
+        // Software level: Enable case-sensitive paths for caching,
+        // meaning 'api/v1/Values' is treated differently from 'api/v1/values'.
+        options.UseCaseSensitivePaths = true;
+    }
+);
+
 
 var app = builder.Build();
 
@@ -173,6 +184,34 @@ app.UseHttpsRedirection();
 
 // Specify the CORS policy to use, in this case "AllowAll"
 app.UseCors("AllowAll");
+
+// Enable response caching middleware which attempts to serve requests directly from the cache if applicable.
+app.UseResponseCaching();
+
+// Directly adding a custom middleware. This example sets specific cache control headers on the response.
+// (does same thing like adding ExceptionMiddleware above)
+// ---
+// Enable response caching middleware which attempts to serve requests directly from the cache if applicable.
+// Software level: This middleware handles storing and retrieving cached responses internally within the app.
+app.Use(async(context, next) =>
+{
+    // Network level: Configure cache control headers for the response.
+    // This influences external caches (like browser caches and proxy servers).
+    context.Response.GetTypedHeaders().CacheControl = new Microsoft.Net.Http.Headers.CacheControlHeaderValue()
+    {
+        Public = true, // Indicates the response can be cached by any cache (browser, proxy, etc.)
+        MaxAge = TimeSpan.FromSeconds(10) // get new data every 10 seconds - this is just an example. find a balance between performance and freshness
+    };
+
+    // Network level: Configure the 'Vary' header to ensure different versions of response are cached based on 'Accept-Encoding'.
+    // This is critical for correctly caching responses that may vary based on content encoding.
+    context.Response.Headers[Microsoft.Net.Http.Headers.HeaderNames.Vary] =
+        new string[] { "Accept Encoding" };
+
+    // Continue processing the request in the middleware pipeline.
+    await next();
+}
+);
 
 app.UseAuthentication();
 
