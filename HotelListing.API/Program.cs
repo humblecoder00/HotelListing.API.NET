@@ -12,6 +12,9 @@ using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using System.Text;
 using Microsoft.OpenApi.Models;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -195,6 +198,20 @@ builder.Services.AddResponseCaching(options =>
     }
 );
 
+// Health checks
+builder.Services.AddHealthChecks()
+    .AddCheck<CustomHealthCheck>(
+        "Custom Health Check",
+        failureStatus: HealthStatus.Degraded,
+        // You can add tags to categorize the health checks, such as custom, readyness, database, etc.
+        tags: new[] { "custom" }
+     )
+     .AddSqlServer(connectionString, tags: new[] { "database" }) // health checks for SQL Server
+     // health checks if EF can connect to the SQL server DB. If you have several DB contexts, you can add them all here.
+     .AddDbContextCheck<HotelListingDbContext>(tags: new[] { "database" });
+    // NOTE: You can add more health checks here, such as liveness, readiness, etc. when dealing with Docker, Kubernetes, etc.
+    // If you're using Azure, you can add setup probes against your health check endpoint.
+
 // Add the OData service to the builder.Services
 builder.Services.AddControllers().AddOData(options =>
 {
@@ -211,6 +228,75 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+}
+
+// This middleware is used to handle health checks, any endpoint name can be used
+app.MapHealthChecks("/healthcheck", new HealthCheckOptions
+{
+    Predicate = healthCheck => healthCheck.Tags.Contains("custom"),
+    ResultStatusCodes =
+    {
+        [HealthStatus.Healthy] = StatusCodes.Status200OK,
+        [HealthStatus.Degraded] = StatusCodes.Status503ServiceUnavailable,
+        [HealthStatus.Unhealthy] = StatusCodes.Status200OK, // It still works, but it's not healthy enough
+    },
+    ResponseWriter = WriteResponse
+});
+
+app.MapHealthChecks("/databasehealthcheck", new HealthCheckOptions
+{
+    Predicate = healthCheck => healthCheck.Tags.Contains("database"),
+    ResultStatusCodes =
+    {
+        [HealthStatus.Healthy] = StatusCodes.Status200OK,
+        [HealthStatus.Degraded] = StatusCodes.Status503ServiceUnavailable,
+        [HealthStatus.Unhealthy] = StatusCodes.Status200OK, // It still works, but it's not healthy enough
+    },
+    ResponseWriter = WriteResponse
+});
+
+// uses .NET core system.text.json to write the response
+static Task WriteResponse(HttpContext context, HealthReport healthReport)
+{
+    context.Response.ContentType = "application/json; charset=utf-8";
+
+    var options = new JsonWriterOptions { Indented = true };
+
+    using var memoryStream = new MemoryStream();
+    using (var jsonWriter = new Utf8JsonWriter(memoryStream, options))
+    {
+        jsonWriter.WriteStartObject();
+        jsonWriter.WriteString("status", healthReport.Status.ToString());
+        jsonWriter.WriteStartObject("results");
+
+        // Generate a JSON object for each health check result
+        foreach (var healthReportEntry in healthReport.Entries)
+        {
+            jsonWriter.WriteStartObject(healthReportEntry.Key);
+            jsonWriter.WriteString("status",
+                healthReportEntry.Value.Status.ToString());
+            jsonWriter.WriteString("description",
+                healthReportEntry.Value.Description);
+            jsonWriter.WriteStartObject("data");
+
+            foreach (var item in healthReportEntry.Value.Data)
+            {
+                jsonWriter.WritePropertyName(item.Key);
+
+                JsonSerializer.Serialize(jsonWriter, item.Value,
+                    item.Value?.GetType() ?? typeof(object));
+            }
+
+            jsonWriter.WriteEndObject();
+            jsonWriter.WriteEndObject();
+        }
+
+        jsonWriter.WriteEndObject();
+        jsonWriter.WriteEndObject();
+    }
+
+    return context.Response.WriteAsync(
+        Encoding.UTF8.GetString(memoryStream.ToArray()));
 }
 
 // This middleware is used to handle exceptions globally (custom)
@@ -259,3 +345,22 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+
+class CustomHealthCheck : IHealthCheck
+{
+    public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+    {
+        var isHealthy = true;
+
+        // custom checks, logic, etc. etc.
+
+        if(isHealthy)
+        {
+            return Task.FromResult(HealthCheckResult.Healthy("All systems are looking good."));
+        }
+
+        // return a failure status from context
+        return Task.FromResult(new HealthCheckResult(context.Registration.FailureStatus, "System Unhealthy"));
+    }
+}
