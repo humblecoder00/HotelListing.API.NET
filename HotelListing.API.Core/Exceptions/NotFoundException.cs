@@ -4,7 +4,7 @@
     public class NotFoundException : ApplicationException
     {
         // We pass "name" to the base class constructor (ApplicationException) to set the message
-        public NotFoundException(string name, object key) : base($"{name} ({key}) was not found")
+        public NotFoundException(string name, object key) : base($"{name} with id ({key}) was not found")
         {
             
         }

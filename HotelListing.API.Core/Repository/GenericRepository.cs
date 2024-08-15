@@ -4,6 +4,7 @@ using HotelListing.API.Core.Contracts;
 using HotelListing.API.Data;
 using HotelListing.API.Core.Models;
 using Microsoft.EntityFrameworkCore;
+using HotelListing.API.Core.Exceptions;
 
 namespace HotelListing.API.Core.Repository
 {
@@ -25,9 +26,28 @@ namespace HotelListing.API.Core.Repository
             return entity;
         }
 
+        // TSource & TResult -> this is a generic, it can be any DTO or entity, it's a placeholder
+        public async Task<TResult> AddAsync<TSource, TResult>(TSource source)
+        {
+            // Cool thing about Automapper is that it can map generics to other generics as well
+            var entity = _mapper.Map<T>(source);
+
+            await _context.AddAsync(entity);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<TResult>(entity);
+        }
+
         public async Task DeleteAsync(int id)
         {
             var entity = await GetAsync(id);
+
+            if(entity is null)
+            {
+                // Since we have Country and Hotel data types, both have names,
+                // We use the typeof(T).Name to get the name of the entity type
+                throw new NotFoundException(typeof(T).Name, id);
+            }
 
             // remove is not async, so we don't use await here:
             _context.Set<T>().Remove(entity);
@@ -67,6 +87,13 @@ namespace HotelListing.API.Core.Repository
             };
         }
 
+        public async Task<List<TResult>> GetAllAsync<TResult>()
+        {
+            return await _context.Set<T>()
+                .ProjectTo<TResult>(_mapper.ConfigurationProvider)
+                .ToListAsync();
+        }
+
         public async Task<T> GetAsync(int? id)
         {
             // "id is null" is equivelant of "id == null"
@@ -79,12 +106,39 @@ namespace HotelListing.API.Core.Repository
             return await _context.Set<T>().FindAsync(id);
         }
 
+        public async Task<TResult?> GetAsync<TResult>(int? id)
+        {
+            var result = await _context.Set<T>().FindAsync(id);
+
+            if (result is null)
+            {
+                throw new NotFoundException(typeof(T).Name, id.HasValue ? id : "No Key Provided");
+            }
+
+
+            return _mapper.Map<TResult>(result);
+        }
+
         public async Task UpdateAsync(T entity)
         {
             // update is not async, so we don't use await here:
             _context.Update(entity);
 
             // save changes is async
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task UpdateAsync<TSource>(int id, TSource source)
+        {
+            var entity = await GetAsync(id);
+
+            if(entity is null)
+            {
+                throw new NotFoundException(typeof(T).Name, id);
+            }
+
+            _mapper.Map(source, entity);
+            _context.Update(entity);
             await _context.SaveChangesAsync();
         }
     }

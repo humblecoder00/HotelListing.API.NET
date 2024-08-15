@@ -1,5 +1,8 @@
 ﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using HotelListing.API.Core.Contracts;
+using HotelListing.API.Core.Exceptions;
+using HotelListing.API.Core.Models.Country;
 using HotelListing.API.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,19 +22,32 @@ namespace HotelListing.API.Core.Repository
         and the chef follows those instructions (IoC). The service dictates the "what" and "how," not the chef.
          */
         private readonly HotelListingDbContext _context;
+        private readonly IMapper _mapper;
 
         public CountriesRepository(HotelListingDbContext context, IMapper mapper) : base(context, mapper)
         {
             this._context = context;
+            this._mapper = mapper;
         }
 
-        public async Task<Country> GetDetails(int id)
+        public async Task<CountryDTO> GetDetails(int id)
         {
             // Include() is an inner join in EF Core.
             // We're saying, Go to the Countries table -> Include the list of Hotels,
             // and then find the first record where the Id matches the Id that was passed in:
-            return await _context.Countries.Include(x => x.Hotels)
+            //return await _context.Countries.Include(x => x.Hotels)
+            //    .FirstOrDefaultAsync(x => x.Id == id);
+
+            var country = await _context.Countries.Include(x => x.Hotels)
+                .ProjectTo<CountryDTO>(_mapper.ConfigurationProvider)
                 .FirstOrDefaultAsync(x => x.Id == id);
+
+            if(country is null)
+            {
+                throw new NotFoundException(nameof(GetDetails), id);
+            }
+
+            return country;
         }
 
         public async Task<bool> CountryExists(int id)
