@@ -28,10 +28,8 @@ namespace HotelListing.API.Controllers
         [HttpGet("GetAll")]
         public async Task<ActionResult<IEnumerable<HotelDTO>>> GetHotels()
         {
-            var hotels = await _hotelsRepository.GetAllAsync();
-            var records = _mapper.Map<List<HotelDTO>>(hotels);
-
-            return Ok(records);
+            var hotels = await _hotelsRepository.GetAllAsync<HotelDTO>();
+            return Ok(hotels);
         }
 
         // GET: api/Hotels/?StartIndex=0&PageSize=25&PageNumber=1
@@ -47,16 +45,8 @@ namespace HotelListing.API.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<GetHotelDTO>> GetHotel(int id)
         {
-            var hotel = await _hotelsRepository.GetDetails(id);
-
-            if (hotel == null)
-            {
-                return NotFound();
-            }
-
-            var record = _mapper.Map<GetHotelDTO>(hotel); // Map the hotel entity to GetHotelDTO
-
-            return Ok(record);
+            var hotel = await _hotelsRepository.GetAsync<GetHotelDTO>(id);
+            return Ok(hotel);
         }
 
         // PUT: api/Hotels/5
@@ -64,35 +54,9 @@ namespace HotelListing.API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutHotel(int id, UpdateHotelDTO hotelPayload)
         {
-            if (id != hotelPayload.Id)
-            {
-                return BadRequest();
-            }
-
-            // Check if the country exists
-            var country = await _countriesRepository.CountryExists(hotelPayload.CountryId);
-
-            if (country == null)
-            {
-                return BadRequest("Country does not exist.");
-            }
-
-            // Check if the hotel exists
-            var hotel = await _hotelsRepository.GetAsync(id);
-
-            if (hotel == null)
-            {
-                return NotFound();
-            }
-
-            // Entity Framework will automatically track the changes made to the hotel object
-            // without having to explicitly set the state to "EntityState.Modified"
-            // hotelPayload -> maps to -> hotel
-            _mapper.Map(hotelPayload, hotel);
-
             try
             {
-                await _hotelsRepository.UpdateAsync(hotel);
+                await _hotelsRepository.UpdateAsync(id, hotelPayload);
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -114,34 +78,15 @@ namespace HotelListing.API.Controllers
         [HttpPost]
         public async Task<ActionResult<Hotel>> PostHotel(CreateHotelDTO hotelPayload)
         {
-            // Check if the country exists
-            var country = await _countriesRepository.CountryExists(hotelPayload.CountryId);
-
-            if (!country)
-            {
-                return BadRequest("Country does not exist.");
-            }
-
-            var newHotel = _mapper.Map<Hotel>(hotelPayload);
-
-            await _hotelsRepository.AddAsync(newHotel);
-
-            return CreatedAtAction("GetHotel", new { id = newHotel.Id }, newHotel);
+            var hotel = await _hotelsRepository.AddAsync<CreateHotelDTO, HotelDTO>(hotelPayload);
+            return CreatedAtAction(nameof(GetHotel), new { id = hotel.Id }, hotel);
         }
 
         // DELETE: api/Hotels/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteHotel(int id)
         {
-            var hotel = await _hotelsRepository.GetAsync(id);
-
-            if (hotel == null)
-            {
-                return NotFound();
-            }
-
             await _hotelsRepository.DeleteAsync(id);
-
             return NoContent();
         }
 
