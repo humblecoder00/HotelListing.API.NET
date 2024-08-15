@@ -2,10 +2,10 @@
 using Microsoft.EntityFrameworkCore;
 using HotelListing.API.Data;
 using AutoMapper;
-using HotelListing.API.Models.Hotel;
-using HotelListing.API.Contracts;
-using HotelListing.API.Models;
-using HotelListing.API.Models.Country;
+using HotelListing.API.Core.Models.Hotel;
+using HotelListing.API.Core.Contracts;
+using HotelListing.API.Core.Models;
+using HotelListing.API.Core.Models.Country;
 
 namespace HotelListing.API.Controllers
 {
